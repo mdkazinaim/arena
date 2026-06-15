@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Bites Nearby — Discover Popular Food Spots</title>
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #FBF7F0;
+    --ink: #1A1614;
+    --tomato: #E94B3C;
+    --mustard: #F2A93B;
+    --olive: #6B7A3F;
+    --sky: #BCD7E8;
+  }
+  html, body { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; background: var(--cream); color: var(--ink); }
+  .font-display { font-family: 'Fraunces', serif; }
+  .grain {
+    background-image: radial-gradient(rgba(26,22,20,0.04) 1px, transparent 1px);
+    background-size: 4px 4px;
+  }
+  .pill-shadow { box-shadow: 0 8px 24px -10px rgba(26,22,20,0.18); }
+  .card-shadow { box-shadow: 0 12px 30px -16px rgba(26,22,20,0.25); }
+  .skeleton {
+    background: linear-gradient(90deg, #ece6d8 0%, #f5efe0 50%, #ece6d8 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+  }
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  .fade-up { animation: fadeUp 0.5s ease-out both; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .chip-active { background: var(--ink); color: var(--cream); }
+  .scroll-x::-webkit-scrollbar { display: none; }
+  .scroll-x { scrollbar-width: none; }
+  .star { color: var(--mustard); }
+  .heart-btn.active svg { fill: var(--tomato); stroke: var(--tomato); }
+  .marquee { animation: marquee 30s linear infinite; }
+  @keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .map-grid {
+    background-image:
+      linear-gradient(rgba(26,22,20,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(26,22,20,0.06) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+  details[open] summary .chev { transform: rotate(180deg); }
+  .chev { transition: transform 0.2s ease; }
+  /* Custom range */
+  input[type="range"] { accent-color: var(--ink); }
+  /* Modal */
+  .modal-backdrop { backdrop-filter: blur(6px); }
+</style>
+</head>
+<body class="grain min-h-screen">
+
+  <!-- Top Announcement Bar -->
+  <div class="bg-ink text-cream text-sm overflow-hidden">
+    <div class="flex whitespace-nowrap py-2 marquee">
+      <span class="mx-8">🔥 Free delivery on first order over $15</span>
+      <span class="mx-8">🌮 Taco Tuesday at La Vida — 2 for $6</span>
+      <span class="mx-8">☕ New: Oat milk latte now at every Bean & Co</span>
+      <span class="mx-8">🍜 Ramen Festival this weekend in Mission District</span>
+      <span class="mx-8">🔥 Free delivery on first order over $15</span>
+      <span class="mx-8">🌮 Taco Tuesday at La Vida — 2 for $6</span>
+      <span class="mx-8">☕ New: Oat milk latte now at every Bean & Co</span>
+      <span class="mx-8">🍜 Ramen Festival this weekend in Mission District</span>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="sticky top-0 z-40 bg-cream/85 backdrop-blur border-b border-ink/10">
+    <div class="max-w-7xl mx-auto px-5 py-4 flex items-center gap-4">
+      <a href="#" class="flex items-center gap-2 shrink-0">
+        <div class="w-10 h-10 rounded-2xl bg-ink text-cream flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11h18"/><path d="M12 11v9"/><path d="M5 11a7 7 0 0 1 14 0"/><path d="M9 8V5a3 3 0 0 1 6 0v3"/></svg>
+        </div>
+        <div class="leading-tight">
+          <div class="font-display text-xl font-extrabold tracking-tight">Bites Nearby</div>
+          <div class="text-[11px] text-ink/60 -mt-0.5">Discover. Dine. Repeat.</div>
+        </div>
+      </a>
+
+      <!-- Search Bar -->
+      <div class="flex-1 max-w-2xl mx-auto">
+        <div class="relative">
+          <div class="flex items-center bg-white border border-ink/10 rounded-full pill-shadow overflow-hidden">
+            <div class="pl-5 pr-2 text-ink/50">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-3.5-3.5"/></svg>
+            </div>
+            <input id="searchInput" type="text" placeholder="Search restaurants, dishes, or 'pizza near me'..."
+                   class="flex-1 py-3 pr-2 bg-transparent outline-none text-sm placeholder:text-ink/40" />
+            <button id="locateBtn" class="m-1.5 p-2.5 rounded-full hover:bg-ink/5 text-ink/70" title="Use my location">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3"/><path d="M12 19v3"/><path d="M2 12h3"/><path d="M19 12h3"/></svg>
+            </button>
+            <button id="searchBtn" class="m-1.5 px-5 py-2.5 rounded-full bg-ink text-cream text-sm font-semibold hover:scale-[1.02] transition">Search</button>
+          </div>
+        </div>
+      </div>
+
+      <nav class="hidden md:flex items-center gap-5 text-sm font-medium text-ink/70">
+        <a href="#" class="hover:text-ink">Lists</a>
+        <a href="#" class="hover:text-ink">Reservations</a>
+        <a href="#" class="hover:text-ink">Sign in</a>
+        <button class="px-4 py-2 rounded-full border border-ink/15 hover:border-ink/40">List your spot</button>
+      </nav>
+
+      <button id="mobileMenuBtn" class="md:hidden p-2 rounded-full border border-ink/10">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Location Bar -->
+  <div class="max-w-7xl mx-auto px-5 pt-6">
+    <div class="flex flex-wrap items-center gap-3">
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-ink/10 pill-shadow text-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-tomato" style="color:var(--tomato)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s-7-7.5-7-13a7 7 0 0 1 14 0c0 5.5-7 13-7 13z"/><circle cx="12" cy="9" r="2.5"/></svg>
+        <span class="text-ink/70">Showing near</span>
+        <span id="locationLabel" class="font-semibold">San Francisco, CA</span>
+        <button class="text-ink/50 hover:text-ink" title="Change location" onclick="openLocationModal()">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+      </div>
+      <div class="flex items-center gap-2 text-sm text-ink/60">
+        <span>·</span>
+        <span id="resultCount">24 spots found</span>
+        <span>·</span>
+        <span>Open now</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hero -->
+  <section class="max-w-7xl mx-auto px-5 pt-6">
+    <div class="rounded-[28px] bg-ink text-cream relative overflow-hidden p-8 md:p-12">
+      <div class="absolute -right-16 -top-16 w-72 h-72 rounded-full opacity-30" style="background:radial-gradient(circle, var(--mustard), transparent 70%)"></div>
+      <div class="absolute -right-32 -bottom-32 w-80 h-80 rounded-full opacity-20" style="background:radial-gradient(circle, var(--tomato), transparent 70%)"></div>
+
+      <div class="relative grid md:grid-cols-2 gap-8 items-center">
+        <div>
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cream/10 text-cream/80 text-xs">
+            <span class="w-1.5 h-1.5 rounded-full bg-[color:var(--mustard)]"></span>
+            Trending this week
+          </div>
+          <h1 class="font-display text-4xl md:text-6xl font-black leading-[1.05] mt-4">
+            Find your next <em class="not-italic" style="color:var(--mustard)">favorite bite</em> — right around the corner.
+          </h1>
+          <p class="mt-5 text-cream/70 max-w-md">
+            Curated restaurants, hidden gems, and street food heroes near you. Real photos, real reviews, no fluff.
+          </p>
+          <div class="mt-7 flex flex-wrap gap-3">
+            <button onclick="setQuickCategory('Pizza')" class="px-5 py-2.5 rounded-full bg-[color:var(--tomato)] text-cream font-semibold text-sm hover:scale-[1.03] transition">Try pizza spots</button>
+            <button onclick="setQuickCategory('Coffee')" class="px-5 py-2.5 rounded-full bg-cream text-ink font-semibold text-sm hover:scale-[1.03] transition">Coffee lovers</button>
+            <button onclick="setQuickCategory('Vegan')" class="px-5 py-2.5 rounded-full border border-cream/20 text-cream font-semibold text-sm hover:bg-cream/10 transition">Vegan picks</button>
+          </div>
+        </div>
+
+        <!-- Mini Map -->
+        <div class="relative h-72 md:h-80 rounded-2xl overflow-hidden border border-cream/10 map-grid" style="background:#EFE7D2">
+          <div class="absolute inset-0">
+            <svg viewBox="0 0 400 320" class="w-full h-full">
+              <path d="M20 240 C 80 200, 140 260, 200 220 S 340 200, 380 240" stroke="#1A1614" stroke-opacity="0.18" stroke-width="2" fill="none"/>
+              <path d="M40 100 C 120 140, 220 80, 300 120 S 380 80, 400 100" stroke="#1A1614" stroke-opacity="0.12" stroke-width="2" fill="none"/>
+              <circle cx="200" cy="160" r="6" fill="#E94B3C"/>
+              <circle cx="200" cy="160" r="14" fill="none" stroke="#E94B3C" stroke-opacity="0.3" stroke-width="2">
+                <animate attributeName="r" from="6" to="22" dur="2s" repeatCount="indefinite"/>
+                <animate attributeName="stroke-opacity" from="0.5" to="0" dur="2s" repeatCount="indefinite"/>
+              </circle>
+              <circle cx="80" cy="120" r="4" fill="#1A1614" fill-opacity="0.6"/>
+              <circle cx="320" cy="100" r="4" fill="#1A1614" fill-opacity="0.6"/>
+              <circle cx="310" cy="220" r="4" fill="#1A1614" fill-opacity="0.6"/>
+              <circle cx="120" cy="240" r="4" fill="#1A1614" fill-opacity="0.6"/>
+              <circle cx="250" cy="60" r="4" fill="#1A1614" fill-opacity="0.6"/>
+            </svg>
+          </div>
+          <div class="absolute top-3 left-3 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur text-xs font-semibold flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-[color:var(--tomato)]"></span>
+            24 spots nearby
+          </div>
+          <div class="absolute bottom-3 right-3 px-3 py-1.5 rounded-full bg-ink text-cream text-xs font-semibold">Open map view →</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Categories -->
+  <section class="max-w-7xl mx-auto px-5 mt-10">
+    <div class="flex items-end justify-between mb-4">
+      <div>
+        <h2 class="font-display text-2xl md:text-3xl font-extrabold">What are you craving?</h2>
+        <p class="text-ink/60 text-sm">Pick a category or type below to filter results.</p>
+      </div>
+      <button id="clearFilters" class="text-sm text-ink/60 hover:text-ink underline underline-offset-4">Clear all</button>
+    </div>
+    <div id="categoryBar" class="flex gap-2 overflow-x-auto scroll-x pb-2 -mx-1 px-1"></div>
+  </section>
+
+  <!-- Filters & Sort -->
+  <section class="max-w-7xl mx-auto px-5 mt-4">
+    <div class="bg-white border border-ink/10 rounded-2xl p-4 md:p-5 flex flex-col md:flex-row gap-4 items-stretch md:items-center">
+      <div class="flex items-center gap-3 flex-1">
+        <div class="flex items-center gap-2 text-sm">
+          <label class="text-ink/60">Within</label>
+          <select id="radiusSelect" class="bg-cream border border-ink/10 rounded-full px-3 py-1.5 text-sm font-medium focus:outline-none focus:border-ink/40">
+            <option>1 km</option>
+            <option selected>3 km</option>
+            <option>5 km</option>
+            <option>10 km</option>
+          </select>
+        </div>
+
+        <div class="hidden md:flex items-center gap-3">
+          <label class="text-sm text-ink/60">Min rating</label>
+          <input id="ratingRange" type="range" min="0" max="5" step="0.5" value="0" class="w-28"/>
+          <span id="ratingLabel" class="text-sm font-semibold w-10">Any</span>
+        </div>
+
+        <div class="flex items-center gap-2 text-sm">
+          <label class="text-ink/60">Price</label>
+          <div class="flex gap-1">
+            <button data-price="1" class="price-btn w-8 h-8 rounded-full border border-ink/15 text-sm font-semibold hover:border-ink/40">$</button>
+            <button data-price="2" class="price-btn w-8 h-8 rounded-full border border-ink/15 text-sm font-semibold hover:border-ink/40">$$</button>
+            <button data-price="3" class="price-btn w-8 h-8 rounded-full border border-ink/15 text-sm font-semibold hover:border-ink/40">$$$</button>
+            <button data-price="4" class="price-btn w-8 h-8 rounded-full border border-ink/15 text-sm font-semibold hover:border-ink/40">$$$$</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 md:ml-auto">
+        <label class="text-sm text-ink/60">Sort by</label>
+        <select id="sortSelect" class="bg-cream border border-ink/10 rounded-full px-3 py-2 text-sm font-medium focus:outline-none focus:border-ink/40">
+          <option value="popular">Most popular</option>
+          <option value="rating">Highest rated</option>
+          <option value="distance">Nearest</option>
+          <option value="price-asc">Price: low to high</option>
+          <option value="price-desc">Price: high to low</option>
+          <option value="newest">Newest</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <!-- Results Grid -->
+  <main class="max-w-7xl mx-auto px-5 mt-8 pb-20">
+    <div id="resultsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></div>
+
+    <div id="emptyState" class="hidden text-center py-20">
+      <div class="text-6xl mb-4">🥲</div>
+      <h3 class="font-display text-2xl font-bold">No spots match your filters</h3>
+      <p class="text-ink/60 mt-2">Try clearing filters or searching for something else.</p>
+      <button onclick="clearAllFilters()" class="mt-5 px-5 py-2.5 rounded-full bg-ink text-cream text-sm font-semibold">Reset filters</button>
+    </div>
+  </main>
+
+  <!-- Editor's Pick Banner -->
+  <section class="max-w-7xl mx-auto px-5 mb-16">
+    <div class="rounded-3xl overflow-hidden grid md:grid-cols-2 bg-[color:var(--olive)] text-cream relative">
+      <div class="p-8 md:p-12 flex flex-col justify-center">
+        <div class="text-xs uppercase tracking-widest text-cream/70">Editor's Pick</div>
+        <h3 class="font-display text-3xl md:text-4xl font-extrabold mt-2 leading-tight">The 12 best new restaurants in the Mission District</h3>
+        <p class="mt-4 text-cream/80 max-w-md">From a tiny omakase counter to a vegan taqueria that's reinventing the al pastor — here's where to book this month.</p>
+        <button class="mt-6 self-start px-5 py-2.5 rounded-full bg-cream text-ink text-sm font-semibold">Read the list</button>
+      </div>
+      <div class="relative min-h-[260px]">
+        <img src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=70" alt="" class="absolute inset-0 w-full h-full object-cover"/>
+      </div>
+    </div>
+  </section>
+
+  <!-- Newsletter -->
+  <section class="max-w-7xl mx-auto px-5 mb-20">
+    <div class="rounded-3xl bg-[color:var(--mustard)] text-ink p-8 md:p-12 grid md:grid-cols-2 gap-8 items-center">
+      <div>
+        <h3 class="font-display text-3xl md:text-4xl font-extrabold leading-tight">Get the weekly plate.</h3>
+        <p class="mt-3 text-ink/80 max-w-md">One email every Friday. New openings, chef interviews, and the 5 best dishes we ate this week.</p>
+      </div>
+      <form onsubmit="event.preventDefault(); subscribe(this)" class="flex flex-col sm:flex-row gap-3">
+        <input type="email" required placeholder="you@email.com" class="flex-1 px-5 py-3 rounded-full bg-white/80 placeholder:text-ink/50 focus:outline-none focus:bg-white"/>
+        <button class="px-6 py-3 rounded-full bg-ink text-cream font-semibold">Subscribe</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="border-t border-ink/10 bg-white/40">
+    <div class="max-w-7xl mx-auto px-5 py-12 grid md:grid-cols-4 gap-8">
+      <div>
+        <div class="flex items-center gap-2">
+          <div class="w-9 h-9 rounded-xl bg-ink text-cream flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11h18"/><path d="M12 11v9"/><path d="M5 11a7 7 0 0 1 14 0"/><path d="M9 8V5a3 3 0 0 1 6 0v3"/></svg>
+          </div>
+          <span class="font-display text-lg font-extrabold">Bites Nearby</span>
+        </div>
+        <p class="text-sm text-ink/60 mt-3 max-w-xs">Made with love and an empty stomach. Helping you find good food since 2025.</p>
+      </div>
+      <div>
+        <h4 class="font-semibold text-sm mb-3">Discover</h4>
+        <ul class="space-y-2 text-sm text-ink/70">
+          <li><a href="#" class="hover:text-ink">Restaurants</a></li>
+          <li><a href="#" class="hover:text-ink">Cafés</a></li>
+          <li><a href="#" class="hover:text-ink">Street food</a></li>
+          <li><a href="#" class="hover:text-ink">Editor's picks</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="font-semibold text-sm mb-3">For owners</h4>
+        <ul class="space-y-2 text-sm text-ink/70">
+          <li><a href="#" class="hover:text-ink">List your spot</a></li>
+          <li><a href="#" class="hover:text-ink">Insights</a></li>
+          <li><a href="#" class="hover:text-ink">Pricing</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="font-semibold text-sm mb-3">Company</h4>
+        <ul class="space-y-2 text-sm text-ink/70">
+          <li><a href="#" class="hover:text-ink">About</a></li>
+          <li><a href="#" class="hover:text-ink">Careers</a></li>
+          <li><a href="#" class="hover:text-ink">Press</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="border-t border-ink/10">
+      <div class="max-w-7xl mx-auto px-5 py-5 flex flex-col md:flex-row justify-between gap-2 text-xs text-ink/50">
+        <div>© 2026 Bites Nearby. All rights reserved.</div>
+        <div class="flex gap-4">
+          <a href="#" class="hover:text-ink">Privacy</a>
+          <a href="#" class="hover:text-ink">Terms</a>
+          <a href="#" class="hover:text-ink">Cookies</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Location Modal -->
+  <div id="locationModal" class="hidden fixed inset-0 z-50 modal-backdrop bg-ink/40 flex items-center justify-center p-4">
+    <div class="bg-cream rounded-3xl max-w-md w-full p-6 fade-up">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-display text-2xl font-extrabold">Change location</h3>
+        <button onclick="closeLocationModal()" class="w-9 h-9 rounded-full hover:bg-ink/5 flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <p class="text-sm text-ink/60 mb-4">Search any city, neighborhood, or address.</p>
+      <div class="flex items-center bg-white border border-ink/10 rounded-full overflow-hidden">
+        <div class="pl-4 text-ink/50">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s-7-7.5-7-13a7 7 0 0 1 14 0c0 5.5-7 13-7 13z"/><circle cx="12" cy="9" r="2.5"/></svg>
+        </div>
+        <input id="locationInput" type="text" placeholder="e.g. Brooklyn, NY" class="flex-1 py-3 px-2 bg-transparent outline-none text-sm"/>
+        <button onclick="setLocation()" class="m-1.5 px-4 py-2 rounded-full bg-ink text-cream text-sm font-semibold">Set</button>
+      </div>
+      <div class="mt-5">
+        <div class="text-xs uppercase tracking-widest text-ink/50 mb-2">Popular cities</div>
+        <div class="flex flex-wrap gap-2">
+          <button onclick="quickLocation('New York, NY')" class="px-3 py-1.5 rounded-full bg-white border border-ink/10 text-sm hover:border-ink/40">New York</button>
+          <button onclick="quickLocation('Los Angeles, CA')" class="px-3 py-1.5 rounded-full bg-white border border-ink/10 text-sm hover:border-ink/40">Los Angeles</button>
+          <button onclick="quickLocation('Austin, TX')" class="px-3 py-1.5 rounded-full bg-white border border-ink/10 text-sm hover:border-ink/40">Austin</button>
+          <button onclick="quickLocation('Chicago, IL')" class="px-3 py-1.5 rounded-full bg-white border border-ink/10 text-sm hover:border-ink/40">Chicago</button>
+          <button onclick="quickLocation('Seattle, WA')" class="px-3 py-1.5 rounded-full bg-white border border-ink/10 text-sm hover:border-ink/40">Seattle</button>
+          <button onclick="quickLocation('Miami, FL')" class="px-3 py-1.5 rounded-full bg-white border border-ink/10 text-sm hover:border-ink/40">Miami</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 hidden">
+    <div class="bg-ink text-cream px-5 py-3 rounded-full text-sm font-medium shadow-lg">Subscribed! Check your inbox.</div>
+  </div>
+
+<script>
+/* ---------- DATA ---------- */
+const CATEGORIES = [
+  { id: 'all', name: 'All', icon: '🍽️' },
+  { id: 'pizza', name: 'Pizza', icon: '🍕' },
+  { id: 'burger', name: 'Burgers', icon: '🍔' },
+  { id: 'sushi', name: 'Sushi', icon: '🍣' },
+  { id: 'taco', name: 'Tacos', icon: '🌮' },
+  { id: 'ramen', name: 'Ramen', icon: '🍜' },
+  { id: 'coffee', name: 'Coffee', icon: '☕' },
+  { id: 'vegan', name: 'Vegan', icon: '🥗' },
+  { id: 'dessert', name: 'Dessert', icon: '🍰' },
+  { id: 'bbq', name: 'BBQ', icon: '🍖' },
+  { id: 'seafood', name: 'Seafood', icon: '🦞' },
+  { id: 'brunch', name: 'Brunch', icon: '🥞' }
+];
+
+const RESTAURANTS = [
+  { id:1, name:"Tony's Slice House", category:"pizza", price:2, rating:4.8, reviews:1240, distance:0.6, open:true, time:"20-30 min", delivery:2.99, address:"504 Valencia St", tags:["New York style","Wood-fired"], img:"https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=800&q=70", featured:"🔥 Trending" },
+  { id:2, name:"La Vida Taqueria", category:"taco", price:1, rating:4.7, reviews:980, distance:0.4, open:true, time:"15-25 min", delivery:1.99, address:"3110 Mission St", tags:["Al pastor","Cash only"], img:"https://images.unsplash.com/photo-1565299585323-38d6b0865b47?auto=format&fit=crop&w=800&q=70" },
+  { id:3, name:"Bean & Co. Café", category:"coffee", price:2, rating:4.9, reviews:2050, distance:0.3, open:true, time:"10-15 min", delivery:0, address:"2245 Folsom St", tags:["Oat milk","Wi-Fi"], img:"https://images.unsplash.com/photo-1453614512568-c4024d13c247?auto=format&fit=crop&w=800&q=70", featured:"☕ Local favorite" },
+  { id:4, name:"Sakura Omakase", category:"sushi", price:4, rating:4.9, reviews:430, distance:1.2, open:true, time:"30-45 min", delivery:5.99, address:"888 Market St", tags:["Omakase","Reservations"], img:"https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=800&q=70" },
+  { id:5, name:"Greens & Grains", category:"vegan", price:2, rating:4.6, reviews:670, distance:0.9, open:true, time:"20-30 min", delivery:2.49, address:"1500 Howard St", tags:["Plant-based","Gluten free"], img:"https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=70" },
+  { id:6, name:"Smokehouse 1908", category:"bbq", price:3, rating:4.7, reviews:880, distance:2.1, open:true, time:"30-40 min", delivery:3.99, address:"1908 Bryant St", tags:["Brisket","Craft beer"], img:"https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?auto=format&fit=crop&w=800&q=70" },
+  { id:7, name:"Tokyo Ramen Lab", category:"ramen", price:2, rating:4.8, reviews:1530, distance:0.7, open:true, time:"20-30 min", delivery:2.99, address:"414 Mason St", tags:["Tonkotsu","Late night"], img:"https://images.unsplash.com/photo-1623341214825-9f4f963727da?auto=format&fit=crop&w=800&q=70", featured:"🍜 Ramen Fest" },
+  { id:8, name:"Burger & Bones", category:"burger", price:2, rating:4.5, reviews:1120, distance:1.0, open:false, time:"Closed · 11am", delivery:1.99, address:"1024 Polk St", tags:["Smash burger","Cocktails"], img:"https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=70" },
+  { id:9, name:"Crust & Crumble", category:"dessert", price:2, rating:4.9, reviews:760, distance:1.4, open:true, time:"15-25 min", delivery:2.99, address:"2300 Chestnut St", tags:["Pies","Cookies"], img:"https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=800&q=70" },
+  { id:10, name:"Ocean's Edge", category:"seafood", price:4, rating:4.8, reviews:520, distance:2.8, open:true, time:"35-50 min", delivery:6.99, address:"Pier 39", tags:["Oysters","Sea view"], img:"https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=800&q=70" },
+  { id:11, name:"Sunrise Diner", category:"brunch", price:2, rating:4.6, reviews:1890, distance:1.6, open:true, time:"25-35 min", delivery:2.49, address:"2500 Geary Blvd", tags:["Pancakes","All day"], img:"https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=800&q=70" },
+  { id:12, name:"Slice of Naples", category:"pizza", price:2, rating:4.7, reviews:820, distance:1.1, open:true, time:"20-30 min", delivery:2.49, address:"700 Columbus Ave", tags:["Neapolitan","Marinara"], img:"https://images.unsplash.com/photo-1604068549290-dea0e4a305ca?auto=format&fit=crop&w=800&q=70" },
+  { id:13, name:"Verde Bowl", category:"vegan", price:2, rating:4.5, reviews:340, distance:1.3, open:true, time:"15-25 min", delivery:1.99, address:"3401 California St", tags:["Buddha bowls","Açaí"], img:"https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=70" },
+  { id:14, name:"Morning Pour", category:"coffee", price:1, rating:4.8, reviews:610, distance:0.5, open:true, time:"10-15 min", delivery:0, address:"170 Spear St", tags:["Espresso","Pastries"], img:"https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=70" },
+  { id:15, name:"The Taco Truck", category:"taco", price:1, rating:4.9, reviews:2400, distance:0.8, open:true, time:"10-20 min", delivery:0, address:"24th & Mission", tags:["Street food","Carne asada"], img:"https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?auto=format&fit=crop&w=800&q=70", featured:"🌮 Taco Tuesday" },
+  { id:16, name:"Sashimi Story", category:"sushi", price:3, rating:4.6, reviews:280, distance:2.0, open:true, time:"30-40 min", delivery:4.99, address:"500 Post St", tags:["Sashimi","Sake"], img:"https://images.unsplash.com/photo-1611143669185-af224c5e3252?auto=format&fit=crop&w=800&q=70" }
+];
+
+/* ---------- STATE ---------- */
+const state = {
+  search: '',
+  category: 'all',
+  minRating: 0,
+  maxPrice: 4,
+  sort: 'popular',
+  favorites: new Set(JSON.parse(localStorage.getItem('favorites') || '[]')),
+  location: 'San Francisco, CA'
+};
+
+/* ---------- CATEGORY BAR ---------- */
+function renderCategories() {
+  const bar = document.getElementById('categoryBar');
+  bar.innerHTML = CATEGORIES.map(c => `
+    <button data-cat="${c.id}" class="cat-btn shrink-0 px-4 py-2.5 rounded-full border border-ink/10 bg-white text-sm font-medium flex items-center gap-2 hover:border-ink/30 transition ${c.id===state.category?'chip-active':''}">
+      <span>${c.icon}</span>${c.name}
+    </button>
+  `).join('');
+  bar.querySelectorAll('.cat-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.category = btn.dataset.cat;
+      document.getElementById('searchInput').value = '';
+      state.search = '';
+      renderCategories();
+      renderResults();
+    });
+  });
+}
+
+function setQuickCategory(name) {
+  const cat = CATEGORIES.find(c => c.name.toLowerCase() === name.toLowerCase());
+  if (!cat) return;
+  state.category = cat.id;
+  document.getElementById('searchInput').value = '';
+  state.search = '';
+  renderCategories();
+  renderResults();
+  document.getElementById('resultsGrid').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+/* ---------- RENDER RESULTS ---------- */
+function renderResults() {
+  const grid = document.getElementById('resultsGrid');
+  const empty = document.getElementById('emptyState');
+  document.getElementById('resultCount').textContent = `${filteredSorted().length} spots found`;
+
+  const items = filteredSorted();
+  if (!items.length) {
+    grid.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+
+  grid.innerHTML = items.map((r, i) => `
+    <article class="fade-up bg-white border border-ink/10 rounded-2xl overflow-hidden card-shadow hover:-translate-y-1 transition group" style="animation-delay:${i*40}ms">
+      <div class="relative h-44 overflow-hidden">
+        <img src="${r.img}" alt="${r.name}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" onerror="this.src='https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=70'"/>
+        ${r.featured ? `<span class="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur text-[11px] font-semibold">${r.featured}</span>` : ''}
+        <button onclick="toggleFav(${r.id}, this)" class="heart-btn absolute top-3 right-3 w-9 h-9 rounded-full bg-white/95 backdrop-blur flex items-center justify-center hover:scale-110 transition ${state.favorites.has(r.id)?'active':''}" title="Save">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </button>
+        ${!r.open ? `<div class="absolute inset-0 bg-ink/40 flex items-center justify-center"><span class="px-3 py-1 rounded-full bg-cream text-ink text-xs font-semibold">Closed</span></div>` : ''}
+      </div>
+      <div class="p-4">
+        <div class="flex items-start justify-between gap-2">
+          <div>
+            <h3 class="font-bold text-[15px] leading-tight">${r.name}</h3>
+            <p class="text-xs text-ink/60 mt-0.5">${r.address}</p>
+          </div>
+          <div class="shrink-0 flex items-center gap-1 px-2 py-1 rounded-full bg-cream border border-ink/10 text-xs font-semibold">
+            <span class="star">★</span>${r.rating}
+          </div>
+        </div>
+        <div class="mt-3 flex flex-wrap gap-1.5">
+          ${r.tags.map(t => `<span class="text-[11px] px-2 py-0.5 rounded-full bg-cream border border-ink/10 text-ink/70">${t}</span>`).join('')}
+        </div>
+        <div class="mt-3 pt-3 border-t border-ink/10 flex items-center justify-between text-xs">
+          <div class="flex items-center gap-3 text-ink/70">
+            <span class="font-semibold text-ink">${'$'.repeat(r.price)}</span>
+            <span>·</span>
+            <span>${r.distance} km</span>
+            <span>·</span>
+            <span>${r.time}</span>
+          </div>
+          <button class="px-3 py-1.5 rounded-full bg-ink text-cream text-[11px] font-semibold hover:scale-105 transition">View</button>
+        </div>
+      </div>
+    </article>
+  `).join('');
+}
+
+function filteredSorted() {
+  let list = RESTAURANTS.filter(r => {
+    if (state.category !== 'all' && r.category !== state.category) return false;
+    if (r.rating < state.minRating) return false;
+    if (r.price > state.maxPrice) return false;
+    if (state.search) {
+      const q = state.search.toLowerCase();
+      const hay = (r.name + ' ' + r.address + ' ' + r.tags.join(' ') + ' ' + r.category).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  switch (state.sort) {
+    case 'rating': list.sort((a,b) => b.rating - a.rating); break;
+    case 'distance': list.sort((a,b) => a.distance - b.distance); break;
+    case 'price-asc': list.sort((a,b) => a.price - b.price); break;
+    case 'price-desc': list.sort((a,b) => b.price - a.price); break;
+    case 'newest': list.sort((a,b) => b.id - a.id); break;
+    default: list.sort((a,b) => b.reviews - a.reviews);
+  }
+  return list;
+}
+
+/* ---------- FAVORITES ---------- */
+function toggleFav(id, btn) {
+  if (state.favorites.has(id)) { state.favorites.delete(id); btn.classList.remove('active'); }
+  else { state.favorites.add(id); btn.classList.add('active'); }
+  localStorage.setItem('favorites', JSON.stringify([...state.favorites]));
+}
+
+/* ---------- FILTERS WIRING ---------- */
+document.getElementById('searchInput').addEventListener('input', e => {
+  state.search = e.target.value;
+  renderResults();
+});
+document.getElementById('searchBtn').addEventListener('click', () => renderResults());
+document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') renderResults(); });
+
+document.getElementById('ratingRange').addEventListener('input', e => {
+  state.minRating = parseFloat(e.target.value);
+  document.getElementById('ratingLabel').textContent = state.minRating ? `${state.minRating}+` : 'Any';
+  renderResults();
+});
+
+document.querySelectorAll('.price-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const p = parseInt(btn.dataset.price);
+    state.maxPrice = state.maxPrice === p ? 4 : p;
+    document.querySelectorAll('.price-btn').forEach(b => {
+      b.classList.toggle('bg-ink', parseInt(b.dataset.price) <= state.maxPrice && state.maxPrice !== 4);
+      b.classList.toggle('text-cream', parseInt(b.dataset.price) <= state.maxPrice && state.maxPrice !== 4);
+    });
+    renderResults();
+  });
+});
+
+document.getElementById('sortSelect').addEventListener('change', e => { state.sort = e.target.value; renderResults(); });
+document.getElementById('clearFilters').addEventListener('click', clearAllFilters);
+function clearAllFilters() {
+  state.search = ''; state.category = 'all'; state.minRating = 0; state.maxPrice = 4; state.sort = 'popular';
+  document.getElementById('searchInput').value = '';
+  document.getElementById('ratingRange').value = 0;
+  document.getElementById('ratingLabel').textContent = 'Any';
+  document.getElementById('sortSelect').value = 'popular';
+  document.querySelectorAll('.price-btn').forEach(b => { b.classList.remove('bg-ink','text-cream'); });
+  renderCategories(); renderResults();
+}
+
+/* ---------- LOCATION ---------- */
+function openLocationModal() { document.getElementById('locationModal').classList.remove('hidden'); document.getElementById('locationInput').focus(); }
+function closeLocationModal() { document.getElementById('locationModal').classList.add('hidden'); }
+function setLocation() {
+  const v = document.getElementById('locationInput').value.trim();
+  if (v) { state.location = v; document.getElementById('locationLabel').textContent = v; }
+  closeLocationModal();
+}
+function quickLocation(v) { state.location = v; document.getElementById('locationLabel').textContent = v; closeLocationModal(); }
+document.getElementById('locateBtn').addEventListener('click', () => {
+  state.location = 'Current location'; document.getElementById('locationLabel').textContent = '📍 Current location';
+});
+
+/* ---------- NEWSLETTER ---------- */
+function subscribe(form) {
+  document.getElementById('toast').classList.remove('hidden');
+  setTimeout(() => document.getElementById('toast').classList.add('hidden'), 2400);
+  form.reset();
+}
+
+/* ---------- MOBILE MENU ---------- */
+document.getElementById('mobileMenuBtn').addEventListener('click', () => {
+  alert('Mobile menu: Lists · Reservations · Sign in · List your spot');
+});
+
+/* ---------- INIT ---------- */
+renderCategories();
+renderResults();
+</script>
+</body>
+</html>
